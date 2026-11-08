@@ -10,6 +10,16 @@ from typing import List
 import uuid
 from datetime import datetime, timezone
 
+# Import route modules
+from routes import (
+    projects_router,
+    tasks_router,
+    schedules_router,
+    skills_router,
+    workload_router,
+)
+from routes.recommendations import router as recommendations_router
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -20,13 +30,17 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(
+    title="Helm HR Ops API",
+    description="Project management and workload optimization API for GSLAB integration",
+    version="1.0.0"
+)
 
-# Create a router with the /api prefix
+# Create a router with the /api prefix for legacy endpoints
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
+# Define Models (legacy test endpoints)
 class StatusCheck(BaseModel):
     model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
     
@@ -37,10 +51,20 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
-# Add your routes to the router instead of directly to app
+# Legacy test routes
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {
+        "message": "Helm HR Ops API",
+        "status": "operational",
+        "endpoints": {
+            "projects": "/api/projects",
+            "tasks": "/api/tasks",
+            "schedules": "/api/schedules",
+            "skills": "/api/skills",
+            "workload": "/api/workload"
+        }
+    }
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
@@ -66,8 +90,16 @@ async def get_status_checks():
     
     return status_checks
 
-# Include the router in the main app
+# Include the legacy router
 app.include_router(api_router)
+
+# Include all Helm HR Ops routers
+app.include_router(projects_router)
+app.include_router(tasks_router)
+app.include_router(schedules_router)
+app.include_router(skills_router)
+app.include_router(workload_router)
+app.include_router(recommendations_router)
 
 app.add_middleware(
     CORSMiddleware,
